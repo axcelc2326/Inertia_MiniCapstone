@@ -9,14 +9,22 @@ use App\Models\Item;
 
 class ItemController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $items = Item::with('user')
-            ->orderByDesc('created_at')
-            ->paginate(10);
+        // Get search query from request
+        $search = $request->input('search', '');
 
+        // Fetch items based on search query, filtering name, description, and location
+        $items = Item::where('name', 'like', "%{$search}%")
+                     ->orWhere('description', 'like', "%{$search}%")
+                     ->orWhere('location', 'like', "%{$search}%")
+                     ->orderByDesc('created_at')
+                     ->paginate(9);
+
+        // Return paginated items along with the search parameter
         return Inertia::render('Items/Index', [
             'items' => $items,
+            'search' => $search,  // Pass search to keep the value in the search bar after page reload
         ]);
     }
 
@@ -29,6 +37,7 @@ class ItemController extends Controller
     // Handle the creation of a new item
     public function store(Request $request)
     {
+        // Validate the incoming request
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'required|string',
@@ -36,6 +45,7 @@ class ItemController extends Controller
             'status' => 'required|in:lost,found',
         ]);
 
+        // Create a new item and save to the database
         $item = Item::create([
             'name' => $validated['name'],
             'description' => $validated['description'],
@@ -45,6 +55,7 @@ class ItemController extends Controller
             'user_id' => auth()->id(),
         ]);
 
+        // Redirect back to the index page with a success message
         return redirect()->route('items.index')->with('success', 'Item created successfully.');
     }
 }
