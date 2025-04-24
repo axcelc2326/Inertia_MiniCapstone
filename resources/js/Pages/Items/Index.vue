@@ -56,8 +56,29 @@ watch(searchQuery, (newSearchQuery) => {
                     >
                         {{ item.status }}
                     </span>
+
+                    <!-- Edit/Delete Buttons -->
+                    <div v-if="item.can_edit" class="mt-4 flex gap-2">
+                        <Link
+                            :href="`/items/${item.id}/edit`"
+                            class="px-4 py-2 text-sm font-semibold bg-blue-500 text-white rounded-xl shadow hover:bg-blue-600"
+                        >
+                            Edit
+                        </Link>
+                        <Link
+                            :href="`/items/${item.id}`"
+                            method="delete"
+                            as="button"
+                            class="px-4 py-2 text-sm font-semibold bg-red-500 text-white rounded-xl shadow hover:bg-red-600"
+                            preserve-scroll
+                        >
+                            Delete
+                        </Link>
+                    </div>
                 </div>
             </div>
+
+
 
             <!-- Pagination + Current Page Display -->
             <div class="mt-10 flex flex-col items-center gap-2">

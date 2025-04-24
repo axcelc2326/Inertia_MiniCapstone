@@ -11,33 +11,34 @@ class ItemController extends Controller
 {
     public function index(Request $request)
     {
-        // Get search query from request
         $search = $request->input('search', '');
 
-        // Fetch items based on search query, filtering name, description, and location
         $items = Item::where('name', 'like', "%{$search}%")
                      ->orWhere('description', 'like', "%{$search}%")
                      ->orWhere('location', 'like', "%{$search}%")
                      ->orderByDesc('created_at')
-                     ->paginate(9);
+                     ->paginate(9)
+                     ->appends(['search' => $search]);
 
-        // Return paginated items along with the search parameter
+        // Add 'can_edit' flag for authorization check (for edit/delete)
+        $items->getCollection()->transform(function ($item) {
+            $item->can_edit = auth()->user()->hasRole('admin') || $item->user_id === auth()->id();
+            return $item;
+        });
+
         return Inertia::render('Items/Index', [
             'items' => $items,
-            'search' => $search,  // Pass search to keep the value in the search bar after page reload
+            'search' => $search,
         ]);
     }
 
-    // Show create item form
     public function create()
     {
         return Inertia::render('Items/Create');
     }
 
-    // Handle the creation of a new item
     public function store(Request $request)
     {
-        // Validate the incoming request
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'required|string',
@@ -45,8 +46,7 @@ class ItemController extends Controller
             'status' => 'required|in:lost,found',
         ]);
 
-        // Create a new item and save to the database
-        $item = Item::create([
+        Item::create([
             'name' => $validated['name'],
             'description' => $validated['description'],
             'location' => $validated['location'],
@@ -55,7 +55,52 @@ class ItemController extends Controller
             'user_id' => auth()->id(),
         ]);
 
-        // Redirect back to the index page with a success message
         return redirect()->route('items.index')->with('success', 'Item created successfully.');
+    }
+
+    // Show edit form for item
+    public function edit(Item $item)
+    {
+        // Ensure user has permission to edit
+        if (!auth()->user()->hasRole('admin') && $item->user_id !== auth()->id()) {
+            return redirect()->route('items.index')->with('error', 'Unauthorized action.');
+        }
+
+        return Inertia::render('Items/Edit', [
+            'item' => $item,
+        ]);
+    }
+
+    // Update item in database
+    public function update(Request $request, Item $item)
+    {
+        // Ensure user has permission to update
+        if (!auth()->user()->hasRole('admin') && $item->user_id !== auth()->id()) {
+            return redirect()->route('items.index')->with('error', 'Unauthorized action.');
+        }
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'required|string',
+            'location' => 'required|string|max:255',
+            'status' => 'required|in:lost,found',
+        ]);
+
+        $item->update($validated);
+
+        return redirect()->route('items.index')->with('success', 'Item updated successfully.');
+    }
+
+    // Delete item from database
+    public function destroy(Item $item)
+    {
+        // Ensure user has permission to delete
+        if (!auth()->user()->hasRole('admin') && $item->user_id !== auth()->id()) {
+            return redirect()->route('items.index')->with('error', 'Unauthorized action.');
+        }
+
+        $item->delete();
+
+        return redirect()->route('items.index')->with('success', 'Item deleted successfully.');
     }
 }

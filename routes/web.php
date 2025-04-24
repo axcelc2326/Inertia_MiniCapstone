@@ -19,6 +19,7 @@ Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
+Route::resource('items', ItemController::class);
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/items', [ItemController::class, 'index'])->name('items.index');
 });
