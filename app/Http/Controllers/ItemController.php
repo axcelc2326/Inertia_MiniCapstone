@@ -8,19 +8,25 @@ use Illuminate\Support\Str;
 use App\Models\Item;
 
 class ItemController extends Controller
-{
-    public function index(Request $request)
+{public function index(Request $request)
     {
         $search = $request->input('search', '');
+        $status = $request->input('status', ''); // get status from request
 
-        $items = Item::where('name', 'like', "%{$search}%")
-                     ->orWhere('description', 'like', "%{$search}%")
-                     ->orWhere('location', 'like', "%{$search}%")
-                     ->orderByDesc('created_at')
-                     ->paginate(9)
-                     ->appends(['search' => $search]);
+        $items = Item::query()
+            ->when($search, function ($query, $search) {
+                $query->where('name', 'like', "%{$search}%")
+                      ->orWhere('description', 'like', "%{$search}%")
+                      ->orWhere('location', 'like', "%{$search}%");
+            })
+            ->when($status && $status !== 'all', function ($query) use ($status) {
+                $query->where('status', $status);
+            })
+            ->orderByDesc('created_at')
+            ->paginate(9)
+            ->appends(['search' => $search, 'status' => $status]);
 
-        // Add 'can_edit' flag for authorization check (for edit/delete)
+        // Add 'can_edit' flag
         $items->getCollection()->transform(function ($item) {
             $item->can_edit = auth()->user()->hasRole('admin') || $item->user_id === auth()->id();
             return $item;
@@ -29,8 +35,11 @@ class ItemController extends Controller
         return Inertia::render('Items/Index', [
             'items' => $items,
             'search' => $search,
+            'status' => $status,
         ]);
     }
+
+
 
     public function create()
     {
