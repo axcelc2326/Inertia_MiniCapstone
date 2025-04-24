@@ -8,12 +8,13 @@ use Illuminate\Support\Str;
 use App\Models\Item;
 
 class ItemController extends Controller
-{public function index(Request $request)
+{
+    public function index(Request $request)
     {
         $search = $request->input('search', '');
-        $status = $request->input('status', ''); // get status from request
+        $status = $request->input('status', '');
 
-        $items = Item::query()
+        $items = Item::with('user') // ✅ eager load the user who reported the item
             ->when($search, function ($query, $search) {
                 $query->where('name', 'like', "%{$search}%")
                       ->orWhere('description', 'like', "%{$search}%")
@@ -26,7 +27,6 @@ class ItemController extends Controller
             ->paginate(9)
             ->appends(['search' => $search, 'status' => $status]);
 
-        // Add 'can_edit' flag
         $items->getCollection()->transform(function ($item) {
             $item->can_edit = auth()->user()->hasRole('admin') || $item->user_id === auth()->id();
             return $item;
@@ -38,8 +38,6 @@ class ItemController extends Controller
             'status' => $status,
         ]);
     }
-
-
 
     public function create()
     {
@@ -67,10 +65,8 @@ class ItemController extends Controller
         return redirect()->route('items.index')->with('success', 'Item created successfully.');
     }
 
-    // Show edit form for item
     public function edit(Item $item)
     {
-        // Ensure user has permission to edit
         if (!auth()->user()->hasRole('admin') && $item->user_id !== auth()->id()) {
             return redirect()->route('items.index')->with('error', 'Unauthorized action.');
         }
@@ -80,10 +76,8 @@ class ItemController extends Controller
         ]);
     }
 
-    // Update item in database
     public function update(Request $request, Item $item)
     {
-        // Ensure user has permission to update
         if (!auth()->user()->hasRole('admin') && $item->user_id !== auth()->id()) {
             return redirect()->route('items.index')->with('error', 'Unauthorized action.');
         }
@@ -100,10 +94,8 @@ class ItemController extends Controller
         return redirect()->route('items.index')->with('success', 'Item updated successfully.');
     }
 
-    // Delete item from database
     public function destroy(Item $item)
     {
-        // Ensure user has permission to delete
         if (!auth()->user()->hasRole('admin') && $item->user_id !== auth()->id()) {
             return redirect()->route('items.index')->with('error', 'Unauthorized action.');
         }
