@@ -19,7 +19,6 @@ const showingNavigationDropdown = ref(false);
                     <div class="flex items-center gap-6">
                         <!-- Logo -->
                         <Link :href="route('dashboard')" class="flex items-center space-x-2">
-                            <ApplicationLogo class="h-9 w-auto" />
                             <span class="text-lg font-semibold text-gray-700">Lost & Found</span>
                         </Link>
 
