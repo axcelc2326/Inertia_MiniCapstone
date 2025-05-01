@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ItemController;
+use App\Http\Controllers\DashboardController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -15,18 +16,20 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
 
 Route::resource('items', ItemController::class);
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('/items', [ItemController::class, 'index'])->name('items.index');
-});
+Route::put('/items/{item}', [ItemController::class, 'update'])->name('items.update');
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('/items', [ItemController::class, 'index'])->name('items.index');
     Route::get('/items/create', [ItemController::class, 'create'])->name('items.create');
     Route::post('/items', [ItemController::class, 'store'])->name('items.store');
+
+    // ✅ My Items route
+    // Route::get('/myitems', [MyItemsController::class, 'index'])->name('myitems.index');
 });
 
 Route::middleware('auth')->group(function () {

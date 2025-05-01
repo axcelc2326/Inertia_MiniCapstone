@@ -17,6 +17,7 @@ class Item extends Model
         'status',
         'user_id',
         'slug',
+        'image', // Add image field
     ];
 
     // Define the relationship to User

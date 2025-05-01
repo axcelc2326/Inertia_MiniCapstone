@@ -45,26 +45,35 @@ class ItemController extends Controller
     }
 
     public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'required|string',
-            'location' => 'required|string|max:255',
-            'status' => 'required|in:lost,found',
-        ]);
+{
+    $validated = $request->validate([
+        'name' => 'required|string|max:255',
+        'description' => 'required|string',
+        'location' => 'required|string|max:255',
+        'status' => 'required|in:lost,found',
+        'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Validate image
+    ]);
 
-        Item::create([
-            'name' => $validated['name'],
-            'description' => $validated['description'],
-            'location' => $validated['location'],
-            'status' => $validated['status'],
-            'slug' => Str::slug($validated['name'] . '-' . Str::random(5)),
-            'user_id' => auth()->id(),
-        ]);
-
-        return redirect()->route('items.index')->with('success', 'Item created successfully.');
+    // Handle the image upload
+    if ($request->hasFile('image')) {
+        $imagePath = $request->file('image')->store('items', 'public');
+    } else {
+        $imagePath = null; // No image uploaded
     }
 
+    // Create item
+    Item::create([
+        'name' => $validated['name'],
+        'description' => $validated['description'],
+        'location' => $validated['location'],
+        'status' => $validated['status'],
+        'slug' => Str::slug($validated['name'] . '-' . Str::random(5)),
+        'user_id' => auth()->id(),
+        'image' => $imagePath, // Store image path in the database
+    ]);
+
+    return redirect()->route('items.index')->with('success', 'Item created successfully.');
+}
     public function edit(Item $item)
     {
         if (!auth()->user()->hasRole('admin') && $item->user_id !== auth()->id()) {
@@ -77,22 +86,40 @@ class ItemController extends Controller
     }
 
     public function update(Request $request, Item $item)
-    {
-        if (!auth()->user()->hasRole('admin') && $item->user_id !== auth()->id()) {
-            return redirect()->route('items.index')->with('error', 'Unauthorized action.');
-        }
-
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'required|string',
-            'location' => 'required|string|max:255',
-            'status' => 'required|in:lost,found',
-        ]);
-
-        $item->update($validated);
-
-        return redirect()->route('items.index')->with('success', 'Item updated successfully.');
+{
+    if (!auth()->user()->hasRole('admin') && $item->user_id !== auth()->id()) {
+        return redirect()->route('items.index')->with('error', 'Unauthorized action.');
     }
+
+    // Validate the incoming data
+    $validated = $request->validate([
+        'name' => 'required|string|max:255',
+        'description' => 'required|string',
+        'location' => 'required|string',
+        'status' => 'required|in:lost,found',
+        'image' => 'nullable|image|max:2048',  // Allow image to be optional
+    ]);
+
+
+    // Continue with the update logic after validation
+    $item->update([
+        'name' => $request->name,
+        'description' => $request->description,
+        'location' => $request->location,
+        'status' => $request->status,
+    ]);
+
+    // Handle image upload if there is an image
+    if ($request->hasFile('image')) {
+        $path = $request->file('image')->store('images', 'public');
+        $item->update(['image' => $path]);
+    }
+
+    return redirect()->route('items.index')->with('success', 'Item updated successfully');
+}
+
+
+
 
     public function destroy(Item $item)
     {
